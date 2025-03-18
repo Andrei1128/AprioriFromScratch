@@ -1,5 +1,4 @@
-﻿using AprioriFromScratch;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 var dataset = await File.ReadAllLinesAsync("C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\l34.csv");
 
