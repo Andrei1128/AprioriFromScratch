@@ -51,20 +51,12 @@ var liftThreshold = 1; // parametrizable
 
 for (int i = 2; i <= lengthOfPairs; i++)
 {
-    var pairs = new HashSet<string[]>(new StringArrayComparer());
     // TODO: implement for more than 2 items
     foreach (var item1 in filteredItems)
     {
         foreach (var item2 in filteredItems)
         {
             if (item1.Key == item2.Key)
-            {
-                continue;
-            }
-
-            string[] pairItems = [item1.Key, item2.Key];
-
-            if (!pairs.Add(pairItems))
             {
                 continue;
             }
@@ -92,7 +84,7 @@ for (int i = 2; i <= lengthOfPairs; i++)
 
                 if (lift > liftThreshold)
                 {
-                    Console.WriteLine($"Pair: {string.Join(", ", pairItems)}, with Support {support} and Confidence {confidence} and Lift {lift}");
+                    Console.WriteLine($"{item1.Key} => {item2.Key}, with Support {support} and Confidence {confidence} and Lift {lift}");
                 }
             }
         }
