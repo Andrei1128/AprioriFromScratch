@@ -31,26 +31,27 @@ int basketsCount = baskets.Count;
 
 var recurrenceSupportThreshold = 0.01; // parametrizable
 
-Dictionary<string, List<int>> filteredItems = [];
-
-foreach (var item in items)
+Dictionary<string, List<int>> filteredItems = items.Where(x =>
 {
-    var itemSupport = (double)item.Value.Count / basketsCount;
+    var itemSupport = (double)x.Value.Count / basketsCount;
 
     if (itemSupport > recurrenceSupportThreshold)
     {
-        filteredItems.Add(item.Key, item.Value);
+        return true;
     }
-}
+
+    return false;
+
+}).ToDictionary();
 
 var lengthOfPairs = 2; // parametrizable
 var pairsRecurrenceSupportThreshold = 0.01; // parametrizable
 var confidenceThreshold = 0.2; // parametrizable
-
-var pairs = new HashSet<string[]>(new StringArrayComparer());
+var liftThreshold = 1; // parametrizable
 
 for (int i = 2; i <= lengthOfPairs; i++)
 {
+    var pairs = new HashSet<string[]>(new StringArrayComparer());
     // TODO: implement for more than 2 items
     foreach (var item1 in filteredItems)
     {
@@ -83,30 +84,17 @@ for (int i = 2; i <= lengthOfPairs; i++)
                 continue;
             }
 
-            var aboveConfidence = true;
+            var confidence = (double)commonBaskets.Count / item1.Value.Count;
 
-            foreach (var item in pairItems) // its ok?
+            if (confidence > confidenceThreshold)
             {
-                var confidence = (double)commonBaskets.Count / filteredItems[item].Count;
+                var lift = confidence / item2.Value.Count * basketsCount;
 
-                if (confidence < confidenceThreshold)
+                if (lift > liftThreshold)
                 {
-                    aboveConfidence = false;
-                    break;
+                    Console.WriteLine($"Pair: {string.Join(", ", pairItems)}, with Support {support} and Confidence {confidence} and Lift {lift}");
                 }
-
-                if (aboveConfidence)
-                {
-                    Console.WriteLine($"Pair: {string.Join(", ", pairItems)}, with Support {support} and Confidence {confidence}");
-                }
-
-                break;
             }
-
-            //if (aboveConfidence)
-            //{
-            //    Console.WriteLine($"Pair: {string.Join(", ", pairItems)}, with Support {support} and Confidence {0}");
-            //}
         }
     }
 }
