@@ -46,7 +46,9 @@ Dictionary<string, List<int>> filteredItems = items.Where(x =>
 var lengthOfPairs = 2; // parametrizable
 var pairsRecurrenceSupportThreshold = 0.01; // parametrizable
 var confidenceThreshold = 0.2; // parametrizable
-var liftThreshold = 1; // parametrizable
+var interestThreshold = 0.2; // parametrizable
+
+List<string[]> interestingPairs = [];
 
 for (int i = 2; i <= lengthOfPairs; i++)
 {
@@ -77,13 +79,14 @@ for (int i = 2; i <= lengthOfPairs; i++)
 
             var confidence = (double)commonBaskets.Count / item1.Value.Count;
 
-            if (confidence > confidenceThreshold)
+            if (confidence >= confidenceThreshold)
             {
-                var lift = confidence / item2.Value.Count * basketsCount;
+                var interest = Math.Abs(confidence - (double)item2.Value.Count / basketsCount);
 
-                if (lift > liftThreshold)
+                if (interest > interestThreshold)
                 {
-                    Console.WriteLine($"{item1.Key} => {item2.Key}, with Support {support} and Confidence {confidence} and Lift {lift}");
+                    interestingPairs.Add([item1.Key, item2.Key]);
+                    Console.WriteLine($"{item1.Key} => {item2.Key}, with Support: {support}, Confidence: {confidence}, Interest: {interest}");
                 }
             }
         }
