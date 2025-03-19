@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 
-var dataset = await File.ReadAllLinesAsync("C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\l34.csv");
+var filePath = "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\l34.csv"; // parametrizable
+var dataset = await File.ReadAllLinesAsync(filePath);
 
 var sw = new Stopwatch();
 sw.Start();
@@ -34,36 +35,33 @@ Dictionary<string, List<int>> filteredItems = items.Where(x =>
 {
     var itemSupport = (double)x.Value.Count / basketsCount;
 
-    if (itemSupport > recurrenceSupportThreshold)
-    {
-        return true;
-    }
-
-    return false;
+    return itemSupport > recurrenceSupportThreshold;
 
 }).ToDictionary();
 
-var lengthOfPairs = 2; // parametrizable
+var lengthOfPairs = 3; // parametrizable
 var pairsRecurrenceSupportThreshold = 0.01; // parametrizable
 var confidenceThreshold = 0.2; // parametrizable
-var interestThreshold = 0.2; // parametrizable
+var interestThreshold = 0.1; // parametrizable
 
-List<string[]> interestingPairs = [];
+Dictionary<string[], List<int>> interestingPairs = [];
+
+Dictionary<string[], List<int>> candidates = filteredItems.Select(x => new KeyValuePair<string[], List<int>>([x.Key], x.Value))
+                                                          .ToDictionary();
 
 for (int i = 2; i <= lengthOfPairs; i++)
 {
-    // TODO: implement for more than 2 items
-    foreach (var item1 in filteredItems)
+    foreach (var candidate in candidates)
     {
-        foreach (var item2 in filteredItems)
+        foreach (var item in filteredItems)
         {
-            if (item1.Key == item2.Key)
+            if (candidate.Key.Contains(item.Key))
             {
                 continue;
             }
 
-            var commonBaskets = item1.Value.Intersect(item2.Value)
-                                           .ToList();
+            var commonBaskets = candidate.Value.Intersect(item.Value)
+                                               .ToList();
 
             if (commonBaskets.Count == 0)
             {
@@ -77,20 +75,23 @@ for (int i = 2; i <= lengthOfPairs; i++)
                 continue;
             }
 
-            var confidence = (double)commonBaskets.Count / item1.Value.Count;
+            var confidence = (double)commonBaskets.Count / candidate.Value.Count;
 
-            if (confidence >= confidenceThreshold)
+            if (confidence > confidenceThreshold)
             {
-                var interest = Math.Abs(confidence - (double)item2.Value.Count / basketsCount);
+                var interest = Math.Abs(confidence - (double)item.Value.Count / basketsCount);
 
                 if (interest > interestThreshold)
                 {
-                    interestingPairs.Add([item1.Key, item2.Key]);
-                    Console.WriteLine($"{item1.Key} => {item2.Key}, with Support: {support}, Confidence: {confidence}, Interest: {interest}");
+                    interestingPairs.Add([.. candidate.Key, item.Key], commonBaskets);
+                    Console.WriteLine($"{string.Join("&&", candidate.Key)} => {item.Key}, with Support: {support}, Confidence: {confidence}, Interest: {interest}");
                 }
             }
         }
     }
+
+    candidates = interestingPairs.Where(x => x.Key.Length == i)
+                                 .ToDictionary();
 }
 
 sw.Stop();
