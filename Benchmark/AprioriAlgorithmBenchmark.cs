@@ -4,25 +4,31 @@ using BenchmarkDotNet.Attributes;
 
 namespace AprioriFromScratch.Benchmark;
 
+[MemoryDiagnoser]
 public class AprioriAlgorithmBenchmark
 {
     private AprioriAlgorithm _aprioriAlgorithm;
     private readonly IOFileService _ioService;
     private readonly Dictionary<string, HashSet<int>> _dataset;
 
-    [Params(2, 3, 4)]
+    [Params(2, 3, 4, 5)]
+    //[Params(3)]
     public int MaxAntecedentSize;
 
-    [Params(0.01, 0.05, 0.1)]
+    //[Params(0.01, 0.05, 0.1)]
+    [Params(0.01)]
     public double RecurrenceSupportThreshold;
 
-    [Params(0.01, 0.05, 0.1)]
+    //[Params(0.01, 0.05, 0.1)]
+    [Params(0.01)]
     public double PairsRecurrenceSupportThreshold;
 
-    [Params(0.2, 0.3, 0.5)]
+    //[Params(0.2, 0.3, 0.5)]
+    [Params(0.2)]
     public double ConfidenceThreshold;
 
-    [Params(0.2, 0.3, 0.5)]
+    //[Params(0.1, 0.3, 0.5)]
+    [Params(0.1)]
     public double InterestThreshold;
 
     public AprioriAlgorithmBenchmark()
@@ -49,7 +55,7 @@ public class AprioriAlgorithmBenchmark
     }
 
     [Benchmark]
-    public List<AssociationRule> TestGenerateAssociationRules()
+    public List<AssociationRule> GenerateAssociationRules()
     {
         return _aprioriAlgorithm.GenerateAssociationRules(_dataset);
     }

@@ -79,9 +79,9 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
                         }
                     }
                 }
-
-                antecedents = newAntecedents;
             }
+
+            antecedents = newAntecedents;
         }
 
         return associationRules;
