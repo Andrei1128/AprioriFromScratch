@@ -1,109 +1,50 @@
-﻿using System.Diagnostics;
+﻿using AprioriFromScratch.Benchmark;
+using AprioriFromScratch.Contracts;
+using AprioriFromScratch.Implementations;
+using BenchmarkDotNet.Running;
 
 internal class Program
 {
-    private static async Task Main(string[] args)
+    private readonly IAprioriAlgorithm _aprioriAlgorithm;
+    private readonly IIOService _ioService;
+
+    private Program()
     {
-        foreach (var arg in args)
-        {
-            Console.WriteLine(arg);
-        }
+        _aprioriAlgorithm = new AprioriAlgorithm(_maxAntecendentSize: 3,
+                                                 _recurrenceSupportThreshold: 0.01,
+                                                 _pairsRecurrenceSupportThreshold: 0.01,
+                                                 _confidenceThreshold: 0.2,
+                                                 _interestThreshold: 0.1);
 
-        await Apriori("C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\l34.csv", 0.01, 0.01, 0.2, 0.1, 3);
-
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+        _ioService = new IOFileService(_inputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\dataset.csv",
+                                       _outputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\result.csv");
     }
 
-    public static async Task Apriori(string inputFilePath, double recurrenceSupportThreshold, double pairsRecurrenceSupportThreshold, double confidenceThreshold, double interestThreshold, double lengthOfPairs)
+    private Program(IAprioriAlgorithm aprioriAlgorithm, IIOService ioService)
     {
-        var dataset = await File.ReadAllLinesAsync(inputFilePath);
+        _aprioriAlgorithm = aprioriAlgorithm;
+        _ioService = ioService;
+    }
 
-        var sw = new Stopwatch();
-        sw.Start();
+    private async Task RunAsync()
+    {
+        var items = await _ioService.LoadDataset();
 
-        Dictionary<string, List<int>> items = [];
+        var associationRules = _aprioriAlgorithm.GenerateAssociationRules(items);
 
-        HashSet<int> baskets = [];
+        await _ioService.SaveAssociationRules(associationRules);
+    }
 
-        foreach (var line in dataset)
+    public static async Task Main(string[] args)
+    {
+        if (args.Contains("--benchmark"))
         {
-            var rawItems = line.Split(',');
-
-            var basketNo = int.Parse(rawItems[0]);
-            var itemName = rawItems[1];
-
-            var inserted = items.TryAdd(itemName, [basketNo]);
-
-            if (!inserted)
-            {
-                items[itemName].Add(basketNo);
-            }
-
-            baskets.Add(basketNo);
+            BenchmarkRunner.Run<AprioriAlgorithmBenchmark>();
         }
-
-        int basketsCount = baskets.Count;
-
-        Dictionary<string, List<int>> filteredItems = items.Where(x =>
+        else
         {
-            var itemSupport = (double)x.Value.Count / basketsCount;
-
-            return itemSupport > recurrenceSupportThreshold;
-
-        }).ToDictionary();
-
-        Dictionary<string[], List<int>> interestingPairs = [];
-
-        Dictionary<string[], List<int>> candidates = filteredItems.Select(x => new KeyValuePair<string[], List<int>>([x.Key], x.Value))
-                                                                  .ToDictionary();
-
-        for (int i = 2; i <= lengthOfPairs; i++)
-        {
-            foreach (var candidate in candidates)
-            {
-                foreach (var item in filteredItems)
-                {
-                    if (candidate.Key.Contains(item.Key))
-                    {
-                        continue;
-                    }
-
-                    var commonBaskets = candidate.Value.Intersect(item.Value)
-                                                       .ToList();
-
-                    if (commonBaskets.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    var support = (double)commonBaskets.Count / basketsCount;
-
-                    if (support < pairsRecurrenceSupportThreshold)
-                    {
-                        continue;
-                    }
-
-                    var confidence = (double)commonBaskets.Count / candidate.Value.Count;
-
-                    if (confidence > confidenceThreshold)
-                    {
-                        var interest = Math.Abs(confidence - (double)item.Value.Count / basketsCount);
-
-                        if (interest > interestThreshold)
-                        {
-                            interestingPairs.Add([.. candidate.Key, item.Key], commonBaskets);
-                            //Console.WriteLine($"{string.Join("&&", candidate.Key)} => {item.Key}, with Support: {support}, Confidence: {confidence}, Interest: {interest}");
-                        }
-                    }
-                }
-            }
-
-            candidates = interestingPairs.Where(x => x.Key.Length == i)
-                                         .ToDictionary();
+            var program = new Program();
+            await program.RunAsync();
         }
-
-        sw.Stop();
-        Console.WriteLine($"Elapsed ms: {sw.ElapsedMilliseconds}");
     }
 }
