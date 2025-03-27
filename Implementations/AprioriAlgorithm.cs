@@ -11,19 +11,18 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
 {
     public List<AssociationRule> GenerateAssociationRules(Dictionary<string, HashSet<int>> items)
     {
-        int basketsCount = items.Values.SelectMany(set => set)
+        int basketsCount = items.Values.AsParallel()
+                                       .SelectMany(set => set)
                                        .Distinct()
                                        .Count();
 
-        var prunnedItems = items.Where(x => CalculateSupport(x.Value.Count, basketsCount) > _recurrenceSupportThreshold)
+        var prunnedItems = items.Where(x => CalculateSupport(x.Value.Count, basketsCount) >= _recurrenceSupportThreshold)
                                 .ToDictionary(x => x.Key, x => x.Value);
 
-        List<AssociationRule> associationRules = [];
-
         if (prunnedItems.Count == 0)
-        {
-            return associationRules;
-        }
+            return [];
+
+        List<AssociationRule> associationRules = [];
 
         var antecedents = prunnedItems.ToDictionary(x => new HashSet<string> { x.Key },
                                                     x => x.Value);
@@ -32,59 +31,59 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
         {
             Dictionary<HashSet<string>, HashSet<int>> newAntecedents = [];
 
-            foreach (var antecendent in antecedents)
+            Parallel.ForEach(antecedents, (antecedent) =>
             {
-                foreach (var item in prunnedItems)
+                foreach (var (itemKey, itemBaskets) in prunnedItems)
                 {
-                    if (antecendent.Key.Contains(item.Key))
-                    {
+                    if (antecedent.Key.Contains(itemKey))
                         continue;
-                    }
 
-                    var commonBaskets = antecendent.Value.Count < item.Value.Count
-                                      ? antecendent.Value.Intersect(item.Value).ToHashSet()
-                                      : item.Value.Intersect(antecendent.Value).ToHashSet();
-
+                    var commonBaskets = GetCommonBaskets(antecedent.Value, itemBaskets);
                     if (commonBaskets.Count == 0)
-                    {
                         continue;
-                    }
 
                     double support = CalculateSupport(commonBaskets.Count, basketsCount);
-
                     if (support < _pairsRecurrenceSupportThreshold)
-                    {
                         continue;
+
+                    double confidence = CalculateConfidence(commonBaskets.Count, antecedent.Value.Count);
+                    if (confidence <= _confidenceThreshold)
+                        continue;
+
+                    double interest = CalculateInterest(confidence, itemBaskets.Count, basketsCount);
+                    if (interest <= _interestThreshold)
+                        continue;
+
+                    lock (associationRules)
+                    {
+                        associationRules.Add(new AssociationRule
+                        {
+                            Antecedent = antecedent.Key,
+                            Consequent = itemKey,
+                            Support = support,
+                            Confidence = confidence,
+                            Interest = interest
+                        });
                     }
 
-                    double confidence = CalculateConfidence(commonBaskets.Count, antecendent.Value.Count);
-
-                    if (confidence > _confidenceThreshold)
+                    lock (newAntecedents)
                     {
-                        double interest = CalculateInterest(confidence, item.Value.Count, basketsCount);
-
-                        if (interest > _interestThreshold)
-                        {
-                            associationRules.Add(
-                                new AssociationRule
-                                {
-                                    Antecedent = antecendent.Key,
-                                    Consequent = item.Key,
-                                    Support = support,
-                                    Confidence = confidence,
-                                    Interest = interest
-                                });
-
-                            newAntecedents[[.. antecendent.Key, item.Key]] = commonBaskets;
-                        }
+                        newAntecedents[[.. antecedent.Key, itemKey]] = commonBaskets;
                     }
                 }
-            }
+            });
 
             antecedents = newAntecedents;
         }
 
         return associationRules;
+    }
+
+    private static HashSet<int> GetCommonBaskets(HashSet<int> set1, HashSet<int> set2)
+    {
+        return set1.Count < set2.Count
+            ? new HashSet<int>(set1.Where(set2.Contains))
+            : new HashSet<int>(set2.Where(set1.Contains));
     }
 
     private static double CalculateSupport(double commonBaskets, double totalBaskets)

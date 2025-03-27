@@ -11,24 +11,24 @@ public class AprioriAlgorithmBenchmark
     private readonly IOFileService _ioService;
     private readonly Dictionary<string, HashSet<int>> _dataset;
 
-    [Params(2, 3, 4, 5)]
-    //[Params(3)]
+    //[Params(2, 3, 4, 5)]
+    [Params(3)]
     public int MaxAntecedentSize;
 
     //[Params(0.01, 0.05, 0.1)]
-    [Params(0.01)]
+    [Params(0.2)]
     public double RecurrenceSupportThreshold;
 
     //[Params(0.01, 0.05, 0.1)]
-    [Params(0.01)]
+    [Params(0.2)]
     public double PairsRecurrenceSupportThreshold;
 
     //[Params(0.2, 0.3, 0.5)]
-    [Params(0.2)]
+    [Params(0.5)]
     public double ConfidenceThreshold;
 
     //[Params(0.1, 0.3, 0.5)]
-    [Params(0.1)]
+    [Params(0.5)]
     public double InterestThreshold;
 
     public AprioriAlgorithmBenchmark()
@@ -36,7 +36,7 @@ public class AprioriAlgorithmBenchmark
         _aprioriAlgorithm = null!;
 
         _ioService = new IOFileService(
-            _inputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\dataset.csv",
+            _inputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\ratings.csv",
             _outputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\result.csv");
 
         _dataset = _ioService.LoadDataset()

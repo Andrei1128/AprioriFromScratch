@@ -16,7 +16,7 @@ internal class Program
                                                  _confidenceThreshold: 0.2,
                                                  _interestThreshold: 0.1);
 
-        _ioService = new IOFileService(_inputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\dataset.csv",
+        _ioService = new IOFileService(_inputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\ratings.csv",
                                        _outputFilePath: "C:\\Users\\Andrei\\source\\repos\\AprioriFromScratch\\result.csv");
     }
 
