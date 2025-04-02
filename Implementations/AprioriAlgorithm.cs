@@ -1,4 +1,5 @@
-﻿using AprioriFromScratch.Contracts;
+﻿using AprioriFromScratch.Benchmark;
+using AprioriFromScratch.Contracts;
 using AprioriFromScratch.Models;
 
 namespace AprioriFromScratch.Implementations;
@@ -9,6 +10,10 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
                               double _confidenceThreshold,
                               double _interestThreshold) : IAprioriAlgorithm
 {
+    public int BasketsCount { get; set; } = 0;
+    public int PrunedItemsCount { get; set; } = 0;
+    public Dictionary<int, int> RulesCountPerTerms { get; set; } = [];
+
     public List<AssociationRule> GenerateAssociationRules(Dictionary<string, HashSet<int>> items)
     {
         int basketsCount = items.Values.AsParallel()
@@ -16,15 +21,21 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
                                        .Distinct()
                                        .Count();
 
-        var prunnedItems = items.Where(x => CalculateSupport(x.Value.Count, basketsCount) >= _recurrenceSupportThreshold)
-                                .ToDictionary(x => x.Key, x => x.Value);
+        var prunedItems = items.Where(x => CalculateSupport(x.Value.Count, basketsCount) >= _recurrenceSupportThreshold)
+                               .ToDictionary(x => x.Key, x => x.Value);
 
-        if (prunnedItems.Count == 0)
+        if (AprioriAlgorithmBenchmark.NeedsSetupDetails)
+        {
+            BasketsCount = basketsCount;
+            PrunedItemsCount = prunedItems.Count;
+        }
+
+        if (prunedItems.Count == 0)
             return [];
 
         List<AssociationRule> associationRules = [];
 
-        var antecedents = prunnedItems.ToDictionary(x => new HashSet<string> { x.Key },
+        var antecedents = prunedItems.ToDictionary(x => new HashSet<string> { x.Key },
                                                     x => x.Value);
 
         for (int i = 2; i <= _maxAntecendentSize; i++)
@@ -33,7 +44,7 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
 
             Parallel.ForEach(antecedents, (antecedent) =>
             {
-                foreach (var (itemKey, itemBaskets) in prunnedItems)
+                foreach (var (itemKey, itemBaskets) in prunedItems)
                 {
                     if (antecedent.Key.Contains(itemKey))
                         continue;
@@ -74,6 +85,11 @@ public class AprioriAlgorithm(int _maxAntecendentSize,
             });
 
             antecedents = newAntecedents;
+
+            if (AprioriAlgorithmBenchmark.NeedsSetupDetails)
+            {
+                RulesCountPerTerms.Add(i, antecedents.Count);
+            }
         }
 
         return associationRules;
